@@ -25,11 +25,16 @@ router.post("/", async (req, res) => {
     const contact = await createContact(req.body);
     return res.status(201).location(`/contacts/${contact._id}`).json(contact);
   } catch (err) {
-    // TODO Error case: Duplicate name
+    // Error case: Duplicate name
+    if (err.code === 11000) 
+      return res.status(422).send("Contact name must be unique");
+    
+    // Error case: Missing name
+    if (err.name === "Validation error" && err.message.includes("name"))
+      return res.status(422).send("Contact name is required");
 
-    // TODO Error case: Missing name
-
-    // TODO Error case: Invalid _id
+    // Error case: Invalid _id
+    if (err.name === "CastError") return res.status(422).send("Invalid contact id");
 
     // Unexpected error
     console.error(err); // For debugging
@@ -51,15 +56,18 @@ router.patch("/:id", async (req, res) => {
     if (!updated) return res.status(404).send(`Contact ${id} not found`);
     return res.json(updated);
   } catch (err) {
-    // TODO Error case: Duplicate name
+    // Error case: Duplicate name
+    if (err.code === 11000) return res.status(422).send("Contact name must be unique.");
 
-    // TODO Error case: Invalid _id
+    // Error case: Invalid _id
+    if (err.name === "CastError") return res.status(422).send("Invalid contact id");
 
     // Unexpected error
     console.error(err); // For debugging
     return res.status(500).send("Unexpected error when PATCHing contact");
   }
 });
+
 
 /**
  * DELETE /api/contacts/:id: Deletes the contact with the given id, if it exist. Returns a 204 response
@@ -72,7 +80,8 @@ router.delete("/:id", async (req, res) => {
     await deleteContact(id);
     return res.sendStatus(204);
   } catch (err) {
-    // TODO Error case: Invalid _id
+    // Error case: Invalid _id
+    if (err.name === "CastError") return res.status(422).send("Invalid contact id");
 
     // Unexpected error
     console.error(err); // For debugging
